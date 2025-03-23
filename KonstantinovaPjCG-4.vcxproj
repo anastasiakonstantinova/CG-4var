@@ -141,6 +141,9 @@
   <ItemGroup>
     <ClCompile Include="KonstantinovaPjCG-4.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="loadShadersProgram.h" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
