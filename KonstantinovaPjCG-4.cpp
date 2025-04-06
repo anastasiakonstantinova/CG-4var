@@ -1,5 +1,77 @@
 ﻿#include <iostream>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include "loadShadersProgram.h"
+
+// Глобальные переменные для камеры
+glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
+glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
+
+// Параметры мыши
+float lastX = 512.0f / 2, lastY = 512.0f / 2;
+float yaw = -90.0f, pitch = 0.0f;
+bool firstMouse = true;
+float sensitivity = 0.1f;
+
+// Обработчик движения мыши
+void mouse_callback(GLFWwindow* window, double xposIn, double yposIn) {
+    float xpos = static_cast<float>(xposIn);
+    float ypos = static_cast<float>(yposIn);
+
+    if (firstMouse) {
+        lastX = xpos;
+        lastY = ypos;
+        firstMouse = false;
+    }
+
+    float xoffset = xpos - lastX;
+    float yoffset = lastY - ypos;
+    lastX = xpos;
+    lastY = ypos;
+
+    xoffset *= sensitivity;
+    yoffset *= sensitivity;
+
+    yaw += xoffset;
+    pitch += yoffset;
+
+    if (pitch > 89.0f) pitch = 89.0f;
+    if (pitch < -89.0f) pitch = -89.0f;
+
+    glm::vec3 front;
+    front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+    front.y = sin(glm::radians(pitch));
+    front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+    cameraFront = glm::normalize(front);
+}
+
+// Обработчик клавиатуры
+void processInput(GLFWwindow* window) {
+    const float cameraSpeed = 0.1f; // Увеличена скорость для наглядности
+
+    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+        glfwSetWindowShouldClose(window, true);
+
+    // Вектор правого направления камеры
+    glm::vec3 cameraRight = glm::normalize(glm::cross(cameraFront, cameraUp));
+
+    // Обработка перемещения
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+        cameraPos += cameraSpeed * cameraFront;
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+        cameraPos -= cameraSpeed * cameraFront;
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+        cameraPos -= cameraRight * cameraSpeed;
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+        cameraPos += cameraRight * cameraSpeed;
+
+    /*std::cout << "Camera Position: ("
+        << cameraPos.x << ", "
+        << cameraPos.y << ", "
+        << cameraPos.z << ")" << std::endl;*/
+}
 
 
 int main() {
@@ -28,14 +100,22 @@ int main() {
 
     // square points and idxs
     GLfloat points[] = {
-        -0.5f, -0.5f, 0.0f,
-        0.5f, -0.5f, 0.0f,
-        0.5f,  0.5f, 0.0f,
-        -0.5f,  0.5f, 0.0f
+        -0.5f, -0.5f, -0.5f,
+         0.5f, -0.5f, -0.5f,
+         0.5f,  0.5f, -0.5f,
+        -0.5f,  0.5f, -0.5f,
+        -0.5f, -0.5f,  0.5f,
+         0.5f, -0.5f,  0.5f,
+         0.5f,  0.5f,  0.5f,
+        -0.5f,  0.5f,  0.5f
     };
     GLuint indices[] = {
-        0, 1, 2,
-        0, 2, 3
+        0, 1, 2, 2, 3, 0,
+        4, 5, 6, 6, 7, 4,
+        0, 3, 7, 7, 4, 0,
+        1, 2, 6, 6, 5, 1,
+        0, 1, 5, 5, 4, 0,
+        3, 2, 6, 6, 7, 3
     };
 
     // create config
@@ -61,6 +141,13 @@ int main() {
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
+    // load shaders
+    std::string vertShaderStr = loadShader("shaders/shader.vert");
+    std::string fragShaderStr = loadShader("shaders/shader.frag");
+    const char* vertShader = vertShaderStr.c_str();
+    const char* fragShader = fragShaderStr.c_str();
+    
+    // compile shaders
     GLuint vs = compileShader(GL_VERTEX_SHADER, vertShader);
     GLuint fs = compileShader(GL_FRAGMENT_SHADER, fragShader);
 
@@ -78,12 +165,32 @@ int main() {
 
     // ---- MAIN ----
     while (!glfwWindowShouldClose(window)) {
+        processInput(window);
 
         // bg color: 167, 139, 113 (A78B71)
         glClearColor(0.6549f, 0.5451f, 0.4431f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        // Матрицы проекции и 
+        glm::mat4 projection = glm::perspective(
+            glm::radians(45.0f),
+            static_cast<float>(512) / static_cast<float>(512),
+            0.1f,
+            100.0f
+        );
+
+        glm::mat4 view = glm::lookAt(
+            cameraPos,
+            cameraPos + cameraFront,
+            cameraUp
+        );
+
+        glm::mat4 model = glm::mat4(1.0f);
 
         glUseProgram(shaderProgram);
+        glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+        glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "view"), 1, GL_FALSE, glm::value_ptr(view));
+        glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
 
         // figure color: 247, 200, 21 (F7C815)
         float time = glfwGetTime();
@@ -92,9 +199,9 @@ int main() {
         float g = (cos(time) / 2.0f) + .5f;
         float b = .5f;
         glUniform4f(colorLoc, r, g, b, 1.0f);
-        
+
         glBindVertexArray(VAO);
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+        glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
 
         glfwSwapBuffers(window);
         glfwPollEvents();

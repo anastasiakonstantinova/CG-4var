@@ -1,24 +1,22 @@
 #pragma once
+#include <fstream>
+#include <sstream>
 #include <glew.h>
 #include <glfw3.h>
 
-const char* vertShader =
-"#version 460 core\n"
-"layout (location = 0) in vec3 vp;"
-"void main() {"
-"   gl_Position = vec4(vp, 1.0);"
-"}\0";
+// func for load shaders from file
+std::string loadShader(const char* filePath) {
+    std::ifstream file(filePath);
+    if (!file.is_open()) {
+        fprintf(stderr, "ERROR: error load sheder file:\n %s", filePath);
+        return "";
+    }
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    return buffer.str();
+}
 
-const char* fragShader =
-"#version 460 core\n"
-"out vec4 FragColor;"
-"uniform vec4 ourColor;"
-"void main() {"
-"   FragColor = ourColor;"
-"}\0";
-
-
-// funcs for compile shaders
+// func for compile shaders
 GLuint compileShader(GLenum type, const char* source) {
     GLuint shader = glCreateShader(type);
     glShaderSource(shader, 1, &source, NULL);
