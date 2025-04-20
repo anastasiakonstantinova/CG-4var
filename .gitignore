@@ -364,3 +364,4 @@ FodyWeavers.xsd
 
 !bin/
 !KonstantinovaPjCG-4.vcxproj.user
+!model.obj
