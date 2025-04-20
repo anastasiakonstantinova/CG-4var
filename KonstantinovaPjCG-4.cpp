@@ -47,17 +47,24 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn) {
     cameraFront = glm::normalize(front);
 }
 
-// Обработчик клавиатуры
+void updateCameraVectors() {
+    glm::vec3 front;
+    front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+    front.y = sin(glm::radians(pitch));
+    front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+    cameraFront = glm::normalize(front);
+}
+
 void processInput(GLFWwindow* window) {
-    const float cameraSpeed = 0.1f; // Увеличена скорость для наглядности
+    static float cameraSpeed = .0003f;
+    const float rotationSpeed = .01f;
 
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 
-    // Вектор правого направления камеры
     glm::vec3 cameraRight = glm::normalize(glm::cross(cameraFront, cameraUp));
 
-    // Обработка перемещения
+    // --- Перемещение камеры ---
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
         cameraPos += cameraSpeed * cameraFront;
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
@@ -67,10 +74,25 @@ void processInput(GLFWwindow* window) {
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
         cameraPos += cameraRight * cameraSpeed;
 
-    /*std::cout << "Camera Position: ("
-        << cameraPos.x << ", "
-        << cameraPos.y << ", "
-        << cameraPos.z << ")" << std::endl;*/
+    // --- Поворот камеры ---
+    if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
+        yaw += rotationSpeed;
+        updateCameraVectors();
+    }
+    if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
+        yaw -= rotationSpeed;
+        updateCameraVectors();
+    }
+    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
+        pitch += rotationSpeed;
+        if (pitch > 89.0f) pitch = 89.0f;
+        updateCameraVectors();
+    }
+    if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
+        pitch -= rotationSpeed;
+        if (pitch < -89.0f) pitch = -89.0f;
+        updateCameraVectors();
+    }
 }
 
 
@@ -171,7 +193,7 @@ int main() {
         glClearColor(0.6549f, 0.5451f, 0.4431f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // Матрицы проекции и 
+        // Матрицы проекции
         glm::mat4 projection = glm::perspective(
             glm::radians(45.0f),
             static_cast<float>(512) / static_cast<float>(512),
