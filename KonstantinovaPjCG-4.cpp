@@ -4,18 +4,17 @@
 #include <glm/gtc/type_ptr.hpp>
 #include "loadShadersProgram.h"
 
-// Глобальные переменные для камеры
+// Global var for camera
 glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
 glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
 glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 
-// Параметры мыши
+// mouse config
 float lastX = 512.0f / 2, lastY = 512.0f / 2;
 float yaw = -90.0f, pitch = 0.0f;
 bool firstMouse = true;
 float sensitivity = 0.1f;
 
-// Обработчик движения мыши
 void mouse_callback(GLFWwindow* window, double xposIn, double yposIn) {
     float xpos = static_cast<float>(xposIn);
     float ypos = static_cast<float>(yposIn);
@@ -64,7 +63,7 @@ void processInput(GLFWwindow* window) {
 
     glm::vec3 cameraRight = glm::normalize(glm::cross(cameraFront, cameraUp));
 
-    // --- Перемещение камеры ---
+    // --- Camera movement ---
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
         cameraPos += cameraSpeed * cameraFront;
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
@@ -73,26 +72,6 @@ void processInput(GLFWwindow* window) {
         cameraPos -= cameraRight * cameraSpeed;
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
         cameraPos += cameraRight * cameraSpeed;
-
-    // --- Поворот камеры ---
-    if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
-        yaw += rotationSpeed;
-        updateCameraVectors();
-    }
-    if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
-        yaw -= rotationSpeed;
-        updateCameraVectors();
-    }
-    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
-        pitch += rotationSpeed;
-        if (pitch > 89.0f) pitch = 89.0f;
-        updateCameraVectors();
-    }
-    if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
-        pitch -= rotationSpeed;
-        if (pitch < -89.0f) pitch = -89.0f;
-        updateCameraVectors();
-    }
 }
 
 
@@ -184,6 +163,10 @@ int main() {
     // del shaders
     glDeleteShader(vs);
     glDeleteShader(fs);
+
+    glfwSetCursorPosCallback(window, mouse_callback);
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    glEnable(GL_DEPTH_TEST);
 
     // ---- MAIN ----
     while (!glfwWindowShouldClose(window)) {
