@@ -1,19 +1,26 @@
 ﻿#include <iostream>
+
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include "loadShadersProgram.h"
+#include <glad/glad.h>
+#include <glfw3.h>
 
-// Global var for camera
-glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
-glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+#include "headers/shader.h"
+#include "headers/model.h"
+
+// --- Global var for camera ---
+glm::vec3 cameraPos = glm::vec3(-3.0f, 3.0f, 8.0f);
+glm::vec3 cameraFront = glm::normalize(glm::vec3(0.65f, -0.03f, -0.76f));
 glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 
-// mouse config
+// --- mouse config ---
 float lastX = 512.0f / 2, lastY = 512.0f / 2;
-float yaw = -90.0f, pitch = 0.0f;
+float yaw = glm::degrees(atan2(cameraFront.z, cameraFront.x)), pitch = glm::degrees(asin(cameraFront.y));
 bool firstMouse = true;
 float sensitivity = 0.1f;
+
+const int screenResolution = 720;
 
 void mouse_callback(GLFWwindow* window, double xposIn, double yposIn) {
     float xpos = static_cast<float>(xposIn);
@@ -44,6 +51,9 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn) {
     front.y = sin(glm::radians(pitch));
     front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
     cameraFront = glm::normalize(front);
+
+    //printf("x: %f\ty: %f\tz: %f\n", front.x, front.y, front.z);
+    //printf("x: %f\ty: %f\tz: %f\n", cameraFront.x, cameraFront.y, cameraFront.z);
 }
 
 void updateCameraVectors() {
@@ -55,7 +65,7 @@ void updateCameraVectors() {
 }
 
 void processInput(GLFWwindow* window) {
-    static float cameraSpeed = .0003f;
+    static float cameraSpeed = .0007f;
     const float rotationSpeed = .01f;
 
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
@@ -85,88 +95,26 @@ int main() {
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    GLFWwindow* window = glfwCreateWindow(512, 512, "Main window", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(screenResolution, screenResolution, "Main window", NULL, NULL);
     if (!window) {
         glfwTerminate();
         return -1;
     }
 
-    glewExperimental = GL_TRUE;
     glfwMakeContextCurrent(window);
-    GLenum ret = glewInit();
-    if (GLEW_OK != ret) {
-        fprintf(stderr, "Error: %s\n", glewGetErrorString(ret));
-        return 1;
+
+    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
+        fprintf(stderr, "Failed to initialize GLAD\n");
+        return -1;
     }
-
-    // square points and idxs
-    GLfloat points[] = {
-        -0.5f, -0.5f, -0.5f,
-         0.5f, -0.5f, -0.5f,
-         0.5f,  0.5f, -0.5f,
-        -0.5f,  0.5f, -0.5f,
-        -0.5f, -0.5f,  0.5f,
-         0.5f, -0.5f,  0.5f,
-         0.5f,  0.5f,  0.5f,
-        -0.5f,  0.5f,  0.5f
-    };
-    GLuint indices[] = {
-        0, 1, 2, 2, 3, 0,
-        4, 5, 6, 6, 7, 4,
-        0, 3, 7, 7, 4, 0,
-        1, 2, 6, 6, 5, 1,
-        0, 1, 5, 5, 4, 0,
-        3, 2, 6, 6, 7, 3
-    };
-
-    // create config
-    GLuint VBO, VAO, EBO;
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
-    glGenBuffers(1, &EBO);
-
-    glBindVertexArray(VAO);
-
-    // fill VBO
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(points), points, GL_STATIC_DRAW);
-
-    // fill EBO
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-
-    // config attr vertuces
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
-
-    // load shaders
-    std::string vertShaderStr = loadShader("shaders/shader.vert");
-    std::string fragShaderStr = loadShader("shaders/shader.frag");
-    const char* vertShader = vertShaderStr.c_str();
-    const char* fragShader = fragShaderStr.c_str();
     
-    // compile shaders
-    GLuint vs = compileShader(GL_VERTEX_SHADER, vertShader);
-    GLuint fs = compileShader(GL_FRAGMENT_SHADER, fragShader);
+    glEnable(GL_DEPTH_TEST);
 
-    // Create shader's programm 
-    GLuint shaderProgram = glCreateProgram();
-    glAttachShader(shaderProgram, vs);
-    glAttachShader(shaderProgram, fs);
-    glLinkProgram(shaderProgram);
-
-    linkErrorCatch(shaderProgram);
-
-    // del shaders
-    glDeleteShader(vs);
-    glDeleteShader(fs);
+    Shader shaderModel("shaders/shader.vert", "shaders/shader.frag");
+    Model modelObj("resources/models/model.obj");
 
     glfwSetCursorPosCallback(window, mouse_callback);
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-    glEnable(GL_DEPTH_TEST);
 
     // ---- MAIN ----
     while (!glfwWindowShouldClose(window)) {
@@ -179,34 +127,36 @@ int main() {
         // Матрицы проекции
         glm::mat4 projection = glm::perspective(
             glm::radians(45.0f),
-            static_cast<float>(512) / static_cast<float>(512),
+            (float)screenResolution / (float)screenResolution,
             0.1f,
             100.0f
         );
-
         glm::mat4 view = glm::lookAt(
             cameraPos,
             cameraPos + cameraFront,
             cameraUp
         );
-
         glm::mat4 model = glm::mat4(1.0f);
 
-        glUseProgram(shaderProgram);
-        glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
-        glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "view"), 1, GL_FALSE, glm::value_ptr(view));
-        glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
+        // load projection
+        shaderModel.setMat4("projection", projection);
+        shaderModel.setMat4("view", view);
 
-        // figure color: 247, 200, 21 (F7C815)
+        // render model 
+        model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
+        model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
+        model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));
+        shaderModel.setMat4("model", model);
+        
+        // change color
         float time = glfwGetTime();
-        GLint colorLoc = glGetUniformLocation(shaderProgram, "ourColor");
         float r = (sin(time) / 2.0f) + .5f;
         float g = (cos(time) / 2.0f) + .5f;
         float b = .5f;
-        glUniform4f(colorLoc, r, g, b, 1.0f);
+        shaderModel.setVec3("ourColor", r, g, b);
 
-        glBindVertexArray(VAO);
-        glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+        shaderModel.use();
+        modelObj.Draw(shaderModel);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
