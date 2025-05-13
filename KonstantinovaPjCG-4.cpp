@@ -10,11 +10,11 @@
 #include "headers/model.h"
 
 // --- Global var for camera ---
-glm::vec3 cameraPos = glm::vec3(-3.0f, 3.0f, 8.0f);
+glm::vec3 cameraPos = glm::vec3(-3.6f, 3.0f, 10.4f);
 glm::vec3 cameraFront = glm::normalize(glm::vec3(0.65f, -0.03f, -0.76f));
 glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 
-glm::vec3 lightPos = glm::vec3(-2.0f, 3.0f, -2.0f);
+glm::vec3 lightPos = glm::vec3(5.0f, 3.0f, 5.0f);
 
 // main model light reflections config
 const glm::vec3 ambient = glm::vec3(0.2f, 0.2f, 0.2f);
@@ -110,7 +110,7 @@ void drawMainModel(Shader shader, Model modelObj, glm::mat4 projection, glm::mat
     shader.setFloat("material.shininess", 51.2f);
 
     // light set
-    shader.setVec3("light.position", 3.0f, 3.0f, 3.0f);
+    shader.setVec3("light.position", lightPos);
     shader.setVec3("light.ambient", 0.3f, 0.3f, 0.3f);
     shader.setVec3("light.diffuse", 1.0f, 1.0f, 1.0f);  // Яркий белый свет
     shader.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
