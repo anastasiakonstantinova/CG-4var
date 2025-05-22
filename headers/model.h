@@ -1,25 +1,39 @@
 #pragma once
 #include <vector>
 #include <string>
+#include <iostream>
 
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 #include "mesh.h"
+#include "shader.h"
 
 class Model {
 public:
     std::vector<Mesh> meshes;
+    std::vector<glm::mat4> meshTransforms;
     std::string directory;
 
     Model(std::string const& path) {
         loadModel(path);
+        meshTransforms.resize(meshes.size(), glm::mat4(1.0f));
     }
 
     void Draw(Shader& shader) {
-        for (unsigned int i = 0; i < meshes.size(); i++)
+        for (size_t i = 0; i < meshes.size(); i++) {
+            shader.setMat4("model", meshTransforms[i]);
             meshes[i].Draw(shader);
+        }
+    }
+
+    void UpdateTransform(size_t meshIndex, const glm::mat4& transform) {
+        if (meshIndex < meshTransforms.size()) {
+            meshTransforms[meshIndex] = transform;
+        }
     }
 
 private:
@@ -29,7 +43,7 @@ private:
             aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenNormals);
 
         if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) {
-            printf("ERROR::ASSIMP::%s", importer.GetErrorString());
+            std::cerr << "ERROR::ASSIMP::" << importer.GetErrorString() << std::endl;
             return;
         }
 
@@ -38,13 +52,11 @@ private:
     }
 
     void processNode(aiNode* node, const aiScene* scene) {
-        // start all meshes
         for (unsigned int i = 0; i < node->mNumMeshes; i++) {
             aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
             meshes.push_back(processMesh(mesh, scene));
         }
 
-        // start child
         for (unsigned int i = 0; i < node->mNumChildren; i++) {
             processNode(node->mChildren[i], scene);
         }
@@ -54,7 +66,6 @@ private:
         std::vector<Vertex> vertices;
         std::vector<unsigned int> indices;
 
-        // process verts
         for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
             Vertex vertex;
             vertex.Position = glm::vec3(
@@ -70,11 +81,9 @@ private:
                     mesh->mNormals[i].z
                 );
             }
-
             vertices.push_back(vertex);
         }
 
-        // process idxs
         for (unsigned int i = 0; i < mesh->mNumFaces; i++) {
             aiFace face = mesh->mFaces[i];
             for (unsigned int j = 0; j < face.mNumIndices; j++)
